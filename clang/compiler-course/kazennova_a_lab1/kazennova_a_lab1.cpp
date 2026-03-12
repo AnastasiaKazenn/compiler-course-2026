@@ -2,46 +2,83 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendPluginRegistry.h"
+#include "clang/Rewrite/Core/Rewriter.h"
 #include "llvm/Support/raw_ostream.h"
 
+using namespace clang;
+
 namespace {
-class ExampleVisitor final : public clang::RecursiveASTVisitor<ExampleVisitor> {
+class CastVisitor final : public RecursiveASTVisitor<CastVisitor> {
 public:
-  explicit ExampleVisitor(clang::ASTContext *context) : m_context(context) {}
-  bool VisitFunctionDecl(clang::FunctionDecl *func) {
-    func->dump();
+  explicit CastVisitor(ASTContext *context, Rewriter &rewriter)
+      : m_context(context), m_rewriter(rewriter) {}
+
+  bool VisitCStyleCastExpr(CStyleCastExpr *cast) {
+    QualType targetType = cast->getTypeAsWritten();
+    Expr *subExpr = cast->getSubExpr();
+    std::string subExprStr = getExprAsString(subExpr);
+
+    std::string replacement = "static_cast<" + targetType.getAsString() +
+                              ">(" + subExprStr + ")";
+
+    m_rewriter.ReplaceText(cast->getSourceRange(), replacement);
     return true;
   }
 
 private:
-  clang::ASTContext *m_context;
+  ASTContext *m_context;
+  Rewriter &m_rewriter;
+
+  std::string getExprAsString(Expr *expr) {
+    SourceManager &sm = m_context->getSourceManager();
+    SourceRange range = expr->getSourceRange();
+
+    if (range.isInvalid())
+      return "<expr>";
+
+    const char *begin = sm.getCharacterData(range.getBegin());
+    const char *end = sm.getCharacterData(range.getEnd());
+
+    return std::string(begin, end - begin + 1);
+  }
 };
 
-class ExampleConsumer final : public clang::ASTConsumer {
+class CastConsumer final : public ASTConsumer {
 public:
-  explicit ExampleConsumer(clang::ASTContext *context) : m_visitor(context) {}
+  explicit CastConsumer(ASTContext *context, Rewriter &rewriter)
+      : m_visitor(context, rewriter) {}
 
-  void HandleTranslationUnit(clang::ASTContext &context) override {
+  void HandleTranslationUnit(ASTContext &context) override {
     m_visitor.TraverseDecl(context.getTranslationUnitDecl());
   }
 
 private:
-  ExampleVisitor m_visitor;
+  CastVisitor m_visitor;
 };
 
-class ExampleAction final : public clang::PluginASTAction {
+class CastAction final : public PluginASTAction {
 public:
-  std::unique_ptr<clang::ASTConsumer>
-  CreateASTConsumer(clang::CompilerInstance &ci, llvm::StringRef) override {
-    return std::make_unique<ExampleConsumer>(&ci.getASTContext());
+  std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &ci,
+                                                 StringRef) override {
+    m_rewriter.setSourceMgr(ci.getSourceManager(), ci.getLangOpts());
+    return std::make_unique<CastConsumer>(&ci.getASTContext(), m_rewriter);
   }
 
-  bool ParseArgs(const clang::CompilerInstance &ci,
+  void EndSourceFileAction() override {
+    m_rewriter.getEditBuffer(m_rewriter.getSourceMgr().getMainFileID())
+        .write(llvm::outs());
+  }
+
+  bool ParseArgs(const CompilerInstance &ci,
                  const std::vector<std::string> &args) override {
     return true;
   }
+
+private:
+  Rewriter m_rewriter;
 };
+
 } // namespace
 
-static clang::FrontendPluginRegistry::Add<ExampleAction>
-    X("example_plugin", "Description plugin");
+static FrontendPluginRegistry::Add<CastAction>
+    X("kazennova_a_lab1_plugin", "Replace C-style casts with static_cast");

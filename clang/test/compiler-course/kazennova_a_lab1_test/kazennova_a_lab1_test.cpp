@@ -1,15 +1,36 @@
-// RUN: %clang_cc1 -load %llvmshlibdir/example_ClangAST%pluginext -plugin example_plugin -fsyntax-only %s 2>&1 | FileCheck %s
+// RUN: %clang_cc1 -load %llvmshlibdir/kazennova_a_lab1_ClangAST%pluginext -plugin kazennova_a_lab1_plugin -fsyntax-only %s 2>&1 | FileCheck %s
 
-// CHECK: FunctionDecl {{0x[0-9a-fA-F]+}} <{{.*}}> col:20 isEven 'bool (int) noexcept'
-// CHECK-NEXT: |-ParmVarDecl {{0x[0-9a-fA-F]+}} <col:27, col:31> col:31 used value 'int'
-// CHECK-NEXT: |-CompoundStmt {{0x[0-9a-fA-F]+}} <col:47, col:72>
-// CHECK-NEXT: | `-ReturnStmt {{0x[0-9a-fA-F]+}} <col:49, col:69>
-// CHECK-NEXT: |   `-BinaryOperator {{0x[0-9a-fA-F]+}} <col:56, col:69> 'bool' '=='
-// CHECK-NEXT: |     |-BinaryOperator {{0x[0-9a-fA-F]+}} <col:56, col:64> 'int' '%'
-// CHECK-NEXT: |     | |-ImplicitCastExpr {{0x[0-9a-fA-F]+}} <col:56> 'int' <LValueToRValue>
-// CHECK-NEXT: |     | | `-DeclRefExpr {{0x[0-9a-fA-F]+}} <col:56> 'int' lvalue ParmVar {{0x[0-9a-fA-F]+}} 'value' 'int'
-// CHECK-NEXT: |     | `-IntegerLiteral {{0x[0-9a-fA-F]+}} <col:64> 'int' 2
-// CHECK-NEXT: |     `-IntegerLiteral {{0x[0-9a-fA-F]+}} <col:69> 'int' 0
-// CHECK-NEXT: `-WarnUnusedResultAttr {{0x[0-9a-fA-F]+}} <col:3> nodiscard ""
+// CHECK-LABEL: test_simple
+void test_simple() {
+  int x = 10;
+  float y = (float)x;
+  // CHECK: float y = static_cast<float>(x);
+}
 
-[[nodiscard]] bool isEven(int value) noexcept { return value % 2 == 0; }
+// CHECK-LABEL: test_expression
+void test_expression() {
+  int a = 5, b = 3;
+  double d = (double)(a + b);
+  // CHECK: double d = static_cast<double>(a + b);
+}
+
+// CHECK-LABEL: test_pointer
+void test_pointer() {
+  int *ptr = 0;
+  void *v = (void *)ptr;
+  // CHECK: void *v = static_cast<void *>(ptr);
+}
+
+// CHECK-LABEL: test_multiple
+void test_multiple() {
+  int x = 10, y = 20;
+  float f = (float)x + (float)y;
+  // CHECK: float f = static_cast<float>(x) + static_cast<float>(y);
+}
+
+// CHECK-LABEL: test_complex
+void test_complex() {
+  int x = 1, y = 2;
+  float f = (float)(x + y) * (float)(x - y);
+  // CHECK: float f = static_cast<float>(x + y) * static_cast<float>(x - y);
+}
