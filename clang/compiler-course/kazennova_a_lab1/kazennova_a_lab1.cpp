@@ -42,7 +42,8 @@ private:
       QualType destPointee = destType->getPointeeType();
       QualType srcPointee = srcType->getPointeeType();
 
-      return (destPointee.getCVRQualifiers() != srcPointee.getCVRQualifiers()) &&
+      return (destPointee.getCVRQualifiers() !=
+              srcPointee.getCVRQualifiers()) &&
              (destPointee.getTypePtr() == srcPointee.getTypePtr());
     }
 
@@ -92,7 +93,8 @@ private:
     if (!srcClass->isPolymorphic())
       return false;
 
-    if (destClass->isDerivedFrom(srcClass) || srcClass->isDerivedFrom(destClass)) {
+    if (destClass->isDerivedFrom(srcClass) ||
+        srcClass->isDerivedFrom(destClass)) {
       return true;
     }
 
@@ -144,9 +146,9 @@ private:
   }
 
   SourceLocation getExprEndLoc(Expr *expr) {
-    return Lexer::getLocForEndOfToken(
-        expr->getEndLoc(), 0, m_context->getSourceManager(),
-        m_context->getLangOpts());
+    return Lexer::getLocForEndOfToken(expr->getEndLoc(), 0,
+                                      m_context->getSourceManager(),
+                                      m_context->getLangOpts());
   }
 };
 
@@ -188,4 +190,5 @@ private:
 } // namespace
 
 static FrontendPluginRegistry::Add<CastAction>
-    X("kazennova_a_lab1_plugin", "Replace C-style casts with appropriate C++ casts");
+    X("kazennova_a_lab1_plugin",
+      "Replace C-style casts with appropriate C++ casts");
