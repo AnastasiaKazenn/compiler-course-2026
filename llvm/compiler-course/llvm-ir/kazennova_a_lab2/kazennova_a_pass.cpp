@@ -11,61 +11,61 @@ namespace {
 
 class KazennovaFMulAddPass : public PassInfoMixin<KazennovaFMulAddPass> {
 public:
-  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM) {
-    bool Changed = false;
+  PreservedAnalyses run(Function &f, FunctionAnalysisManager &) {
+    bool changed = false;
 
-    for (BasicBlock &BB : F) {
-      for (Instruction &I : llvm::make_early_inc_range(BB)) {
-        auto *Call = dyn_cast<CallInst>(&I);
-        if (!Call)
+    for (BasicBlock &bb : f) {
+      for (Instruction &i : make_early_inc_range(bb)) {
+        auto *call = dyn_cast<CallInst>(&i);
+        if (!call)
           continue;
 
-        Function *Callee = Call->getCalledFunction();
-        if (!Callee)
+        Function *callee = call->getCalledFunction();
+        if (!callee)
           continue;
 
-        if (Callee->getIntrinsicID() == Intrinsic::fmuladd) {
-          replaceFMulAdd(Call);
-          Changed = true;
+        if (callee->getIntrinsicID() == Intrinsic::fmuladd) {
+          replaceFMulAdd(call);
+          changed = true;
         }
       }
     }
 
-    return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
+    return changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
   }
 
 private:
-  void replaceFMulAdd(CallInst *Call) {
-    if (Call->use_empty()) {
-      Call->eraseFromParent();
+  void replaceFMulAdd(CallInst *call) {
+    if (call->use_empty()) {
+      call->eraseFromParent();
       return;
     }
 
-    IRBuilder<> Builder(Call);
+    IRBuilder<> builder(call);
 
-    Value *a = Call->getOperand(0);
-    Value *b = Call->getOperand(1);
-    Value *c = Call->getOperand(2);
+    Value *a = call->getOperand(0);
+    Value *b = call->getOperand(1);
+    Value *c = call->getOperand(2);
 
-    Value *mul = Builder.CreateFMul(a, b);
-    Value *add = Builder.CreateFAdd(mul, c);
+    Value *mul = builder.CreateFMul(a, b);
+    Value *add = builder.CreateFAdd(mul, c);
 
-    if (auto *FMul = dyn_cast<Instruction>(mul))
-      FMul->copyFastMathFlags(Call);
-    if (auto *FAdd = dyn_cast<Instruction>(add))
-      FAdd->copyFastMathFlags(Call);
+    if (auto *fmul = dyn_cast<Instruction>(mul))
+      fmul->copyFastMathFlags(call);
+    if (auto *fadd = dyn_cast<Instruction>(add))
+      fadd->copyFastMathFlags(call);
 
-    if (auto *MulInst = dyn_cast<Instruction>(mul)) {
-      MulInst->setDebugLoc(Call->getDebugLoc());
-      MulInst->copyMetadata(*Call);
+    if (auto *mul_inst = dyn_cast<Instruction>(mul)) {
+      mul_inst->setDebugLoc(call->getDebugLoc());
+      mul_inst->copyMetadata(*call);
     }
-    if (auto *AddInst = dyn_cast<Instruction>(add)) {
-      AddInst->setDebugLoc(Call->getDebugLoc());
-      AddInst->copyMetadata(*Call);
+    if (auto *add_inst = dyn_cast<Instruction>(add)) {
+      add_inst->setDebugLoc(call->getDebugLoc());
+      add_inst->copyMetadata(*call);
     }
 
-    Call->replaceAllUsesWith(add);
-    Call->eraseFromParent();
+    call->replaceAllUsesWith(add);
+    call->eraseFromParent();
   }
 };
 
@@ -74,12 +74,12 @@ private:
 extern "C" ::llvm::PassPluginLibraryInfo LLVM_ATTRIBUTE_WEAK
 llvmGetPassPluginInfo() {
   return {LLVM_PLUGIN_API_VERSION, "KazennovaFMulAddPass", "v0.1",
-          [](PassBuilder &PB) {
-            PB.registerPipelineParsingCallback(
-                [](StringRef Name, FunctionPassManager &FPM,
+          [](PassBuilder &pb) {
+            pb.registerPipelineParsingCallback(
+                [](StringRef name, FunctionPassManager &fpm,
                    ArrayRef<PassBuilder::PipelineElement>) {
-                  if (Name == "decompose-fmuladd") {
-                    FPM.addPass(KazennovaFMulAddPass());
+                  if (name == "decompose-fmuladd") {
+                    fpm.addPass(KazennovaFMulAddPass());
                     return true;
                   }
                   return false;
