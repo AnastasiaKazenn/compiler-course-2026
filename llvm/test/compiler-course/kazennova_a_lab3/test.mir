@@ -1,0 +1,64 @@
+# RUN: llc -mtriple x86_64-unknown-linux-gnu --load=%llvmshlibdir/kazennova_a_lab3_BACKEND%shlibext -run-pass=null-check -o - %s | FileCheck %s
+
+--- |
+  define i32 @test_load(i32* %ptr) {
+  entry:
+    %val = load i32, i32* %ptr
+    ret i32 %val
+  }
+  
+  define void @test_store(i32* %ptr, i32 %val) {
+  entry:
+    store i32 %val, i32* %ptr
+    ret void
+  }
+...
+---
+name:            test_load
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+body: |
+  bb.0.entry:
+    liveins: $rdi
+    %0:gr64 = COPY $rdi
+    %1:gr32 = MOV32rm %0, 0, _, 0, _
+    $eax = COPY %1
+    RET64 $eax
+...
+---
+name:            test_store
+alignment:       16
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '' }
+  - { reg: '$esi', virtual-reg: '' }
+body: |
+  bb.0.entry:
+    liveins: $rdi, $esi
+    %0:gr64 = COPY $rdi
+    %1:gr32 = COPY $esi
+    MOV32mr %0, 0, _, 0, _, %1
+    RET64
+...
+
+; CHECK-LABEL: name: test_load
+; CHECK: bb.0.entry:
+; CHECK-NEXT: liveins: $rdi
+; CHECK-NEXT: [[REG:%[0-9]+]]:gr64 = COPY $rdi
+; CHECK-NEXT: TEST64rr [[REG]], [[REG]]
+; CHECK-NEXT: JCC_1 4, %bb.1
+; CHECK-NEXT: [[REG2:%[0-9]+]]:gr32 = MOV32rm [[REG]], 0, _, 0, _
+; CHECK-NEXT: $eax = COPY [[REG2]]
+; CHECK-NEXT: RET64 $eax
+
+; CHECK-LABEL: name: test_store
+; CHECK: bb.0.entry:
+; CHECK-NEXT: liveins: $rdi, $esi
+; CHECK-NEXT: [[REG:%[0-9]+]]:gr64 = COPY $rdi
+; CHECK-NEXT: [[VAL:%[0-9]+]]:gr32 = COPY $esi
+; CHECK-NEXT: TEST64rr [[REG]], [[REG]]
+; CHECK-NEXT: JCC_1 4, %bb.1
+; CHECK-NEXT: MOV32mr [[REG]], 0, _, 0, _, [[VAL]]
+; CHECK-NEXT: RET64
