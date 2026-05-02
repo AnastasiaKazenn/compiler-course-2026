@@ -1,10 +1,10 @@
+#include "MCTargetDesc/X86BaseInfo.h"
 #include "X86.h"
 #include "X86InstrInfo.h"
 #include "X86Subtarget.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
-#include "MCTargetDesc/X86BaseInfo.h"
 
 using namespace llvm;
 
@@ -31,7 +31,8 @@ public:
           continue;
         MemOpNo += X86II::getOperandBias(Desc);
 
-        const MachineOperand &BaseOp = MI->getOperand(MemOpNo + X86::AddrBaseReg);
+        const MachineOperand &BaseOp =
+            MI->getOperand(MemOpNo + X86::AddrBaseReg);
         if (!BaseOp.isReg())
           continue;
         Register BaseReg = BaseOp.getReg();
@@ -57,6 +58,7 @@ public:
 char NullCheckPass::ID = 0;
 
 static RegisterPass<NullCheckPass>
-    X("null-check", "Insert NULL check before pointer dereference", false, false);
+    X("null-check", "Insert NULL check before pointer dereference", false,
+      false);
 
 } // namespace
