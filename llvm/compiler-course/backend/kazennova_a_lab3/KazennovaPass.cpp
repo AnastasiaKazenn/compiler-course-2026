@@ -42,11 +42,31 @@ public:
         if (BaseReg == X86::RSP || BaseReg == X86::RBP || BaseReg == X86::RIP)
           continue;
 
+        // Проверяем, не является ли предыдущая инструкция уже вызовом
+        // verify_pointer
+        bool AlreadyHasCheck = false;
+        if (MI != MBB.begin()) {
+          auto PrevMI = std::prev(MI);
+          if (PrevMI->getOpcode() == X86::CALL64pcrel32) {
+            // Проверяем, что операнд – внешний символ "verify_pointer"
+            for (const MachineOperand &MO : PrevMI->operands()) {
+              if (MO.isSymbol() &&
+                  StringRef(MO.getSymbolName()) == "verify_pointer") {
+                AlreadyHasCheck = true;
+                break;
+              }
+            }
+          }
+        }
+
+        if (AlreadyHasCheck)
+          continue; // Уже есть проверка – не вставляем новую
+
         DebugLoc DL = MI->getDebugLoc();
         BuildMI(MBB, MI, DL, TII->get(TargetOpcode::COPY), X86::RDI)
             .addReg(BaseReg);
         BuildMI(MBB, MI, DL, TII->get(X86::CALL64pcrel32))
-            .addExternalSymbol("__verify_pointer");
+            .addExternalSymbol("verify_pointer");
 
         Changed = true;
       }

@@ -1,6 +1,8 @@
-# RUN: llc -mtriple x86_64-unknown-linux-gnu --load=%llvmshlibdir/kazennova_a_lab3_BACKEND%shlibext -run-pass=null-check %s -o - | FileCheck %s
+# RUN: llc -mtriple x86_64-unknown-linux-gnu --load=%llvmshlibdir/kazennova_a_lab3_BACKEND%shlibext -run-pass=null-check -o - %s | FileCheck %s
 
 --- |
+  declare void @verify_pointer()
+
   define i32 @test_read(ptr %p) {
     %v = load i32, ptr %p
     ret i32 %v
@@ -45,7 +47,11 @@
     ret void
   }
 
-...
+  define i32 @test_existing_check(ptr %p) {
+    %v = load i32, ptr %p
+    ret i32 %v
+  }
+
 ---
 name: test_read
 tracksRegLiveness: true
@@ -60,7 +66,7 @@ body: |
     ; CHECK-LABEL: name: test_read
     ; CHECK:      %0:gr64 = COPY $rdi
     ; CHECK-NEXT: $rdi = COPY %0
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg
     ; CHECK-NEXT: $eax = COPY %1
     ; CHECK-NEXT: RET 0, $eax
@@ -69,7 +75,6 @@ body: |
     $eax = COPY %1
     RET 0, $eax
 
-...
 ---
 name: test_write
 tracksRegLiveness: true
@@ -86,7 +91,7 @@ body: |
     ; CHECK:      %1:gr32 = COPY $esi
     ; CHECK-NEXT: %0:gr64 = COPY $rdi
     ; CHECK-NEXT: $rdi = COPY %0
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: MOV32mr %0, 1, $noreg, 0, $noreg, %1
     ; CHECK-NEXT: RET 0
     %1:gr32 = COPY $esi
@@ -94,7 +99,6 @@ body: |
     MOV32mr %0, 1, $noreg, 0, $noreg, %1
     RET 0
 
-...
 ---
 name: test_array
 tracksRegLiveness: true
@@ -112,7 +116,7 @@ body: |
     ; CHECK:      %1:gr64_nosp = COPY $rsi
     ; CHECK-NEXT: %0:gr64 = COPY $rdi
     ; CHECK-NEXT: $rdi = COPY %0
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: %2:gr32 = MOV32rm %0, 4, %1, 0, $noreg
     ; CHECK-NEXT: $eax = COPY %2
     ; CHECK-NEXT: RET 0, $eax
@@ -122,7 +126,6 @@ body: |
     $eax = COPY %2
     RET 0, $eax
 
-...
 ---
 name: test_two_pointers
 tracksRegLiveness: true
@@ -141,10 +144,10 @@ body: |
     ; CHECK:      %1:gr64 = COPY $rsi
     ; CHECK-NEXT: %0:gr64 = COPY $rdi
     ; CHECK-NEXT: $rdi = COPY %0
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: %2:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg
     ; CHECK-NEXT: $rdi = COPY %1
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: %3:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg
     ; CHECK-NEXT: %4:gr32 = ADD32rr %2, %3, implicit-def dead $eflags
     ; CHECK-NEXT: $eax = COPY %4
@@ -157,7 +160,6 @@ body: |
     $eax = COPY %4
     RET 0, $eax
 
-...
 ---
 # CHECK-LABEL: name: test_no_ptr
 # CHECK-NOT: CALL64pcrel32
@@ -179,7 +181,6 @@ body: |
     $eax = COPY %1
     RET 0, $eax
 
-...
 ---
 name: test_stack_ptr
 tracksRegLiveness: true
@@ -201,10 +202,10 @@ body: |
     ; CHECK:      %0:gr64 = COPY $rdi
     ; CHECK-NEXT: %1:gr64 = LEA64r %stack.0.stack, 1, $noreg, 0, $noreg
     ; CHECK-NEXT: $rdi = COPY %0
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: %2:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg
     ; CHECK-NEXT: $rdi = COPY %1
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: %3:gr32 = MOV32rm %1, 1, $noreg, 0, $noreg
     ; CHECK-NEXT: %4:gr32 = ADD32rr %2, %3, implicit-def dead $eflags
     ; CHECK-NEXT: $eax = COPY %4
@@ -217,7 +218,6 @@ body: |
     $eax = COPY %4
     RET 0, $eax
 
-...
 ---
 name: test_multiple_derefs
 tracksRegLiveness: true
@@ -236,14 +236,14 @@ body: |
     ; CHECK:      %1:gr32 = COPY $esi
     ; CHECK-NEXT: %0:gr64 = COPY $rdi
     ; CHECK-NEXT: $rdi = COPY %0
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: MOV32mr %0, 1, $noreg, 0, $noreg, %1
     ; CHECK-NEXT: $rdi = COPY %0
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: %2:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg
     ; CHECK-NEXT: %3:gr32 = ADD32ri %2, 1, implicit-def dead $eflags
     ; CHECK-NEXT: $rdi = COPY %0
-    ; CHECK-NEXT: CALL64pcrel32 &__verify_pointer
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
     ; CHECK-NEXT: MOV32mr %0, 1, $noreg, 0, $noreg, %3
     ; CHECK-NEXT: RET 0
     %1:gr32 = COPY $esi
@@ -253,3 +253,25 @@ body: |
     %3:gr32 = ADD32ri %2, 1, implicit-def dead $eflags
     MOV32mr %0, 1, $noreg, 0, $noreg, %3
     RET 0
+
+---
+name: test_existing_check
+tracksRegLiveness: true
+liveins:
+  - { reg: '$rdi', virtual-reg: '%0' }
+body: |
+  bb.0:
+    liveins: $rdi
+    ; CHECK-LABEL: name: test_existing_check
+    ; CHECK:      %0:gr64 = COPY $rdi
+    ; CHECK-NEXT: $rdi = COPY %0
+    ; CHECK-NEXT: CALL64pcrel32 &verify_pointer
+    ; CHECK-NEXT: %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg
+    ; CHECK-NEXT: $eax = COPY %1
+    ; CHECK-NEXT: RET 0, $eax
+    %0:gr64 = COPY $rdi
+    $rdi = COPY %0
+    CALL64pcrel32 &verify_pointer   ; существующий вызов (теперь с &)
+    %1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg
+    $eax = COPY %1
+    RET 0, $eax
