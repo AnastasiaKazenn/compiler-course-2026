@@ -1,4 +1,4 @@
-// RUN: mlir-opt --load-pass-plugin=/home/az890/projects/compiler-course-2026/build/lib/kazennova_a_lab4_MLIR.so --pass-pipeline="builtin.module(max-nesting-depth)" %s | FileCheck %s
+// RUN: mlir-opt --load-pass-plugin=%mlir_lib_dir/kazennova_a_lab4_MLIR%shlibext --pass-pipeline="builtin.module(max-nesting-depth)" %s | FileCheck %s
 
 // функция без блоков (глубина 0)
 // CHECK-LABEL: func.func @test_no_blocks
