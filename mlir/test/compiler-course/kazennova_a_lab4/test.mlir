@@ -1,6 +1,6 @@
 // RUN: mlir-opt --load-pass-plugin=/home/az890/projects/compiler-course-2026/build/lib/kazennova_a_lab4_MLIR.so --pass-pipeline="builtin.module(max-nesting-depth)" %s | FileCheck %s
 
-// Тест 1: Функция без блоков – глубина 0
+// функция без блоков (глубина 0)
 // CHECK-LABEL: func.func @test_no_blocks
 // CHECK-SAME: attributes {max_nesting_depth = "0"}
 func.func @test_no_blocks() -> i32 {
@@ -8,7 +8,7 @@ func.func @test_no_blocks() -> i32 {
   return %c : i32
 }
 
-// Тест 2: Один affine.for – глубина 1
+// лдин affine.for (глубина 1)
 // CHECK-LABEL: func.func @test_affine_for
 // CHECK-SAME: attributes {max_nesting_depth = "1"}
 func.func @test_affine_for() {
@@ -18,7 +18,7 @@ func.func @test_affine_for() {
   return
 }
 
-// Тест 3: Два вложенных affine.for – глубина 2
+// дваа вложенных affine.for (глубина 2)
 // CHECK-LABEL: func.func @test_affine_nested
 // CHECK-SAME: attributes {max_nesting_depth = "2"}
 func.func @test_affine_nested() {
@@ -30,7 +30,7 @@ func.func @test_affine_nested() {
   return
 }
 
-// Тест 4: Три вложенных affine.for – глубина 3
+// три вложенных affine.for (глубина 3)
 // CHECK-LABEL: func.func @test_affine_nested_three
 // CHECK-SAME: attributes {max_nesting_depth = "3"}
 func.func @test_affine_nested_three() {
@@ -44,7 +44,7 @@ func.func @test_affine_nested_three() {
   return
 }
 
-// Тест 6: Один scf.for – глубина 1
+// один scf.for (глубина 1)
 // CHECK-LABEL: func.func @test_scf_for
 // CHECK-SAME: attributes {max_nesting_depth = "1"}
 func.func @test_scf_for() {
@@ -57,7 +57,7 @@ func.func @test_scf_for() {
   return
 }
 
-// Тест 7: Вложенные scf.for – глубина 2
+// вложенные scf.for (глубина 2)
 // CHECK-LABEL: func.func @test_scf_nested
 // CHECK-SAME: attributes {max_nesting_depth = "2"}
 func.func @test_scf_nested() {
@@ -72,7 +72,7 @@ func.func @test_scf_nested() {
   return
 }
 
-// Тест 8: scf.if внутри scf.for – глубина 2
+// scf.if внутри scf.for (глубина 2)
 // CHECK-LABEL: func.func @test_scf_if_in_for
 // CHECK-SAME: attributes {max_nesting_depth = "2"}
 func.func @test_scf_if_in_for() {
@@ -88,7 +88,7 @@ func.func @test_scf_if_in_for() {
   return
 }
 
-// Тест 9: scf.while – глубина 1 (тело while считается блоком)
+// scf.while (глубина 1)
 // CHECK-LABEL: func.func @test_scf_while
 // CHECK-SAME: attributes {max_nesting_depth = "1"}
 func.func @test_scf_while() -> i32 {
@@ -105,7 +105,7 @@ func.func @test_scf_while() -> i32 {
   return %res : i32
 }
 
-// Тест 10: Смешанные scf.for + affine.for – глубина 2
+// смешанные scf.for + affine.for (глубина 2)
 // CHECK-LABEL: func.func @test_mixed_scf_affine
 // CHECK-SAME: attributes {max_nesting_depth = "2"}
 func.func @test_mixed_scf_affine() {
@@ -120,7 +120,7 @@ func.func @test_mixed_scf_affine() {
   return
 }
 
-// Тест 11: Смешанные affine.for + scf.if – глубина 2
+// смешанные affine.for + scf.if (глубина 2)
 // CHECK-LABEL: func.func @test_mixed_affine_scf_if
 // CHECK-SAME: attributes {max_nesting_depth = "2"}
 func.func @test_mixed_affine_scf_if() {
